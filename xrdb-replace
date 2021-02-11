@@ -2,6 +2,27 @@
 
 # Based on this comment: https://www.reddit.com/r/unixporn/comments/8giij5/guide_defining_program_colors_through_xresources/e1acuo0?utm_source=share&utm_medium=web2x&context=3
 
+#########
+# USAGE #
+#########
+
+usage() {
+    cat <<EOM
+    usage: $(basename $0) [-F|-q|-R|-g|-b|-h] [-f file_path] [-d delimiter] [-r reload_script] [target_file] [prefix]
+      -F                          use default file path for settings file. Usually $HOME/.config/xrdb-replace/files
+      -q, --quote                 surround the values with quotes in the target file
+      -R                          run default reload script. Should be located in same directory as target_file and named "reload.sh"
+      -g, --glob                  try using a glob instead of the prefix if a specific xrdb value cannot be found
+      -b, --backup                create a backup of the target_file, named target_file.bak
+      -f, --from-file file_path   use "file_path" as the settings file.
+      -d, --delimiter delimiter   indicates that "delimiter" is used as prefix and suffix for each template value
+      -r, --reload reload_script  specifies the name of the reload script to be used
+      -h, --help                  prints this message
+      target_file                 the target file to apply the script to. Only applicable if "-f" or "-F" are not passed
+      prefix                      the prefix expected to find for each variable. Should correspond to the prefix used in Xresources/Xdefaults
+EOM
+}
+
 #####################
 # PROCESS ARGUMENTS #
 #####################
@@ -78,6 +99,10 @@ do
         -b|--backup)
             BACKUP=1
             shift
+        ;;
+        -h|--help)
+            usage
+            exit 0
         ;;
         *) # unknown option
             POSITIONAL+=("$1") # save it in an array for later
