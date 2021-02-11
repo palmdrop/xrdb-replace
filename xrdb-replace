@@ -1,0 +1,211 @@
+#!/bin/sh
+
+# Based on this comment: https://www.reddit.com/r/unixporn/comments/8giij5/guide_defining_program_colors_through_xresources/e1acuo0?utm_source=share&utm_medium=web2x&context=3
+
+#####################
+# PROCESS ARGUMENTS #
+#####################
+
+# Store name of script
+SELF=$0
+
+# Indicates if to surround the Xresources values with quotes or not
+QUOTE=0
+
+# The delimiter used in the template file. "%" by default
+DELIMITER="%"
+
+# Indicates if to read settings from a file
+# This script should contain lines containing target file and Xresources prefix
+FROM_FILE=0
+FILE_PATH="${XDG_CONFIG_HOME:-$HOME/.config}/xrdb-replace/files"
+
+# Indicates if to run a reload script after replacing the values. Many applications
+# require restart for new colors and settings to take effect.  
+# NOTE: looks for the reload file in the same directory as the target file.
+RELOAD=0
+RELOAD_SCRIPT="reload.sh"
+
+# Tells the script that if it does not find a specified prefix, try using "*"
+USE_GLOB=0
+
+# Indicates if to create a backup of the previous file
+# The backup will have the same path but with a ".bak" suffix
+BACKUP=0
+
+# Array for positional arguments that do not match any of the flags
+POSITIONAL=()
+
+# Loop over all the arguments
+while [[ $# -gt 0 ]]
+do
+    key="$1"
+
+    case $key in
+        -f|--from-file) # A user-specified settings file should be used
+            FROM_FILE=1
+            FILE_PATH="$2"
+            shift 
+            shift 
+        ;;
+        -F) # Default settings file should be used
+            FROM_FILE=1
+            shift
+        ;;
+        -d|--delimiter) # Specifies the delimiter to use
+            DELIMITER="$2"
+            shift
+            shift
+        ;;
+        -q|--quote) # Replaced values will be surrounded by quotes
+            QUOTE=1
+            shift 
+        ;;
+        -r|--reload) # Look for a user-specified reload file
+            RELOAD=1
+            RELOAD_SCRIPT="$2"
+            shift
+            shift
+        ;;
+        -R) # Use the default reload file
+            RELOAD=1
+            shift
+        ;;
+        -g|--use-glob) # Use glob if variable is not found
+            USE_GLOB=1
+            shift
+        ;;
+        -b|--backup)
+            BACKUP=1
+            shift
+        ;;
+        *) # unknown option
+            POSITIONAL+=("$1") # save it in an array for later
+            shift # past argument
+        ;;
+    esac
+done
+
+# Set positional arguments 
+set -- "${POSITIONAL[@]}"
+
+#############
+# FUNCTIONS #
+#############
+
+# Abort function for doing some simple cleanup and exiting the script
+abort() {
+    [ -f "$target_file.tmp" ] && rm $target_file.tmp
+    echo "Error: $1"
+    exit 1
+}
+
+# Function for retrieving a value from Xresources
+get_value() {
+    xrdb -query | grep -w "$1:" | cut -f 2
+}
+
+from_file() {
+    [ $FROM_FILE -eq 0 ] && abort "Cannot read from file without -F or -f flag."
+    
+    # If no valid config file path is passed, exit
+    [ ! -f "$FILE_PATH" ] && abort "Config file $FILE_PATH does not exist."
+
+    # Iterate over all lines in the config file
+    while IFS= read -r line
+    do
+        # Expand possible variables used
+        line=$(eval "echo $line")
+
+        # Reconstruct arguments
+        args=("-d" "$DELIMITER")
+        [ "$QUOTE"    -eq 1 ] && args+=("-q")
+        [ "$RELOAD"   -eq 1 ] && args+=("-r" "$RELOAD_SCRIPT")
+        [ "$USE_GLOB" -eq 1 ] && args+=("-g") 
+        [ "$BACKUP"   -eq 1 ] && args+=("-b")
+
+        # Call recursively for each line in the settings file
+        # The arguments passed to root script are passed before the arguments in the line 
+        # of the settings file. This gives the arguments in the settings file presedence
+        $SELF "${args[@]}" $line 
+    done < "$FILE_PATH"
+}
+
+from_args() {
+    # Target file
+    target_file="$1"
+
+    # Prefix used in Xresources (e.g, Urxvt, dunst, *, etc)
+    prefix="$2"
+
+    # Abort if there's no template file
+    [ ! -f "$target_file.in" ] && abort "No template file for $target_file"
+
+    # Create temporary file
+    cp $target_file.in $target_file.tmp
+
+    # Get variables 
+    vars=( $(grep -oh "\w*$DELIMITER$prefix.*$DELIMITER\w*" $target_file.tmp) )
+    # Remove duplicates
+    vars=( $(printf "%s\n" "${vars[@]}" | sort -u) )
+
+    [ ${#vars[@]} -eq 0 ] && abort "No matching variables"
+
+    # Iterate over all variables
+    for v in ${vars[@]}
+    do
+        # Remove the delimiter at beginning and end of the variable
+        arg="${v#$DELIMITER}"
+        arg="${arg%$DELIMITER}"
+
+        # Abort if argument is empty for whatever reason
+        [ -z $arg ] && abort "Invalid template"
+
+        # Fetch value using xrdb
+        value=$(get_value "$arg")
+
+        # If value is empty, try replacing the prefix with "*"
+        [ -z "$value" -a "$USE_GLOB" -eq 1 ] && {
+            arg="*${arg#$prefix}"
+            value=$(get_value "$arg")
+        }
+
+        # If value is still empty, abort
+        [ -z $value ] && abort "No color matching \"$arg\""
+
+        # Replace the placeholder with the acquired value
+        if [ "$QUOTE" -eq 1 ]; then
+            eval "sed -i 's/$v/\"${value}\"/g' $target_file.tmp"
+        else
+            eval "sed -i 's/$v/${value}/g' $target_file.tmp"
+        fi
+    done
+
+    # Finally, replace target file with our updated one
+    [ -f $target_file ] && {
+        [ "$BACKUP" -eq 0 ] && rm $target_file || mv $target_file $target_file.bak
+    }
+    mv $target_file.tmp $target_file
+
+    echo "Success: created file $target_file using template $target_file.in"
+
+    # Check if a reload script exist! Many applications
+    # require restart to use new config file. If script exists,
+    # run it.
+    if [ "$RELOAD" -eq 1 ]; then
+        reload_path="$(dirname $target_file)/$RELOAD_SCRIPT"
+        [ -f "$reload_path" ] && . $reload_path || echo "Found no reload file for $target_file"
+    fi
+}
+
+###########
+# EXECUTE #
+###########
+
+# Read from file
+[ $FROM_FILE -eq 1 ] && {
+    from_file
+# Or read from arguments
+} || {
+    from_args "$@"
+}
