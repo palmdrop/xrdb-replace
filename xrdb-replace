@@ -21,6 +21,7 @@ usage() {
       target_file                 the target file to apply the script to. Only applicable if "-f" or "-F" are not passed
       prefix                      the prefix expected to find for each variable. Should correspond to the prefix used in Xresources/Xdefaults
 EOM
+    exit 0
 }
 
 #####################
@@ -102,7 +103,6 @@ do
         ;;
         -h|--help)
             usage
-            exit 0
         ;;
         *) # unknown option
             POSITIONAL+=("$1") # save it in an array for later
@@ -162,6 +162,8 @@ from_args() {
 
     # Prefix used in Xresources (e.g, Urxvt, dunst, *, etc)
     prefix="$2"
+
+    [ -z $target_file -o -z $prefix ] && usage
 
     # Abort if there's no template file
     [ ! -f "$target_file.in" ] && abort "No template file for $target_file"
