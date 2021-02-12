@@ -1,7 +1,7 @@
 <!-- PROJECT LOGO -->
 <br />
 <p align="center">
-  <h3 align="center">xrdb-replace</h3>
+  <h1 align="center">xrdb-replace</h1>
 
   <p align="center">
     A script for generating config files using templates and xrdb: perfect for pesky applications that refuse to allow configuration through Xresources.
