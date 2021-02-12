@@ -1,6 +1,7 @@
-#!/bin/sh
+#!/bin/bash
 
-# Based on this comment: https://www.reddit.com/r/unixporn/comments/8giij5/guide_defining_program_colors_through_xresources/e1acuo0?utm_source=share&utm_medium=web2x&context=3
+# author: palmdrop
+# credit: Some of this code is based on a comment by reddit user KD2NYT: https://www.reddit.com/r/unixporn/comments/8giij5/guide_defining_program_colors_through_xresources/e1acuo0?utm_source=share&utm_medium=web2x&context=3
 
 #########
 # USAGE #
@@ -9,9 +10,9 @@
 usage() {
     cat <<EOM
     usage: $(basename $0) [-F|-q|-R|-g|-b|-h] [-f file_path] [-d delimiter] [-r reload_script] [target_file] [prefix]
-      -F                          use default file path for settings file. Usually $HOME/.config/xrdb-replace/files
+      -F, --from-default          use default file path for settings file. Usually \$HOME/.config/xrdb-replace/files
       -q, --quote                 surround the values with quotes in the target file
-      -R                          run default reload script. Should be located in same directory as target_file and named "reload.sh"
+      -R, --reload-default        run default reload script. Should be located in same directory as target_file and named "reload.sh"
       -g, --glob                  try using a glob instead of the prefix if a specific xrdb value cannot be found
       -b, --backup                create a backup of the target_file, named target_file.bak
       -f, --from-file file_path   use "file_path" as the settings file.
@@ -70,7 +71,7 @@ do
             shift 
             shift 
         ;;
-        -F) # Default settings file should be used
+        -F|--from-default) # Default settings file should be used
             FROM_FILE=1
             shift
         ;;
@@ -89,7 +90,7 @@ do
             shift
             shift
         ;;
-        -R) # Use the default reload file
+        -R|--reload-default) # Use the default reload file
             RELOAD=1
             shift
         ;;
