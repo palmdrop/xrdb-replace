@@ -9,18 +9,18 @@
 
 usage() {
     cat <<EOM
-    usage: $(basename $0) [-F|-q|-R|-g|-b|-h] [-f file_path] [-d delimiter] [-r reload_script] [target_file] [prefix]
-      -F, --from-default          use default file path for settings file. Usually \$HOME/.config/xrdb-replace/files
-      -q, --quote                 surround the values with quotes in the target file
-      -R, --reload-default        run default reload script. Should be located in same directory as target_file and named "reload.sh"
-      -g, --glob                  try using a glob instead of the prefix if a specific xrdb value cannot be found
-      -b, --backup                create a backup of the target_file, named target_file.bak
-      -f, --from-file file_path   use "file_path" as the settings file.
-      -d, --delimiter delimiter   indicates that "delimiter" is used as prefix and suffix for each template value
-      -r, --reload reload_script  specifies the name of the reload script to be used
-      -h, --help                  prints this message
-      target_file                 the target file to apply the script to. Only applicable if "-f" or "-F" are not passed
-      prefix                      the prefix expected to find for each variable. Should correspond to the prefix used in Xresources/Xdefaults
+    usage: $(basename $0) [-options ...] [-f file_path] [-d delimiter] [-r reload_script] [target_file] [prefix]
+      -F, --from-default          Read from default settings file. Usually ~/.config/xrdb-replace/files
+      -q, --quote                 Surround xrdb values with quotes in "target_file"
+      -R, --reload-default        Run default reload script. Should be located in the same directory as "target_file" and named "reload.sh"
+      -g, --glob                  Use a glob ("*") instead of "prefix" if a specific xrdb value cannot be found
+      -b, --backup                Create a backup of "target_file", named "target_file.bak"
+      -f, --from-file file_path   Use "file_path" as settings file.
+      -d, --delimiter delimiter   Indicates that "delimiter" surrounds every xrdb variable in the template file
+      -r, --reload reload_script  Specifies the name of the reload script to be used
+      -h, --help                  Prints this message
+      target_file                 The target file to apply the script to. Only used if "-f" or "-F" is not passed
+      prefix                      The xrdb prefix used to identify xrdb variables in the template
 EOM
     exit 0
 }
@@ -29,7 +29,7 @@ EOM
 # PROCESS ARGUMENTS #
 #####################
 
-# Store name of script
+# Store name of this script
 SELF=$0
 
 # Indicates if to surround the Xresources values with quotes or not
@@ -152,7 +152,7 @@ from_file() {
 
         # Call recursively for each line in the settings file
         # The arguments passed to root script are passed before the arguments in the line 
-        # of the settings file. This gives the arguments in the settings file presedence
+        # of the settings file. This gives the arguments in the settings file precedence
         $SELF "${args[@]}" $line 
     done < "$FILE_PATH"
 }
@@ -217,8 +217,8 @@ from_args() {
 
     echo "Success: created file $target_file using template $target_file.in"
 
-    # Check if a reload script exist! Many applications
-    # require restart to use new config file. If script exists,
+    # Check if a reload script exists. Many applications
+    # require restart to use a new config file. If the script exists,
     # run it.
     if [ "$RELOAD" -eq 1 ]; then
         reload_path="$(dirname $target_file)/$RELOAD_SCRIPT"
