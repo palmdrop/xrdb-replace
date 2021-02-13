@@ -26,13 +26,13 @@
     <li>
       <a href="#usage">Usage</a>
       <ul>
-        <li><a href="#basic usage">Basic usage</a></li>
-        <li><a href="#reload script">Reload script</a></li>
+        <li><a href="#basic-usage">Basic usage</a></li>
+        <li><a href="#reload-script">Reload script</a></li>
       </ul>
     </li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
-    <li><a href="#contact">Contact and social media</a></li>
+    <li><a href="#contact-and-social-media">Contact and social media</a></li>
     <li><a href="#acknowledgements">Acknowledgements</a></li>
   </ol>
 </details>
