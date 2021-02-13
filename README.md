@@ -4,7 +4,7 @@
   <h1 align="center">xrdb-replace</h1>
 
   <p align="center">
-    A script for generating config files using templates and xrdb: perfect for pesky applications that refuse to allow configuration through Xresources.
+    A script for generating config files using templates and xrdb: perfect for applications that disallows configuration through Xresources.
     <br />
   </p>
 </p>
@@ -23,7 +23,13 @@
         <li><a href="#installation">Installation</a></li>
       </ul>
     </li>
-    <li><a href="#usage">Usage</a></li>
+    <li>
+      <a href="#usage">Usage</a>
+      <ul>
+        <li><a href="#basic usage">Basic usage</a></li>
+        <li><a href="#reload script">Reload script</a></li>
+      </ul>
+    </li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact and social media</a></li>
@@ -33,19 +39,19 @@
 
 <!-- ABOUT THE PROJECT -->
 ## About The Project
-Being able to customize application at a unified location is hugely benefit, especially when trying to achieve a coherent colorscheme. A great deal of applications support configuration using Xresources, but far from all. When using [dunst](), [alacritty]() or [zathura](), changing colors and other settings have to be changed using the individual config files of those applications, which means that you have to change your colors in mutliple places whenever you redesign your system. What a hazzle.
+Being able to customize the look-and-feel of various applications in a single place is extremely convenient. For many Linux-users, that place is Xresources. However, not all application read variables using the xrdb database. Instead, these applications have to be configured purely using their individual config files, which can be a hassle if you e.g want to achieve a coherent colorscheme across your system. 
 
-I got tired of this and created a script which automates the process. The script takes a template config file where xrdb variables can be used, and produces a complete config file using this.
+This script resolves this issue. Create a template of your config file and indicate whever you wish to read values from the xrdb database. Run the script, and a new config file will be produced with the specified values. 
 
-The script also works with a config file which can contain all the files you have made templates for, and the settings required to convert these templates into a new version of the config file. 
+Every time you edit Xresources or make changes in your template (which you should edit now, instead of your regular config file), run this script for your new changes to take effect.
 
-Every time you edit Xresources or make changes in the template, run this script for your new changes to take effect.
+Some applications, require restart for new settings to be used. The script also has support for running a reload script written by the user, which could be configured to restart the affected applications.
 
-Some applications, however, require restart for new settings to be used. The script also has support for running a reload script written by the user, which could be configured to restart the affected applications.
+More under <a href="#usage">usage</a>.
 
 <!-- GETTING STARTED -->
 ## Getting Started
-This is just a simple bash script. Getting started shouldn't be that complicated.
+This is just a simple bash script. Getting started shouldn't be that complicated. To use the script correctly, please read <a href="#usage">usage</a>.
 
 ### Prerequisites
 I can't imagine that any of these utilities are not already part of your system, but here's a short list:
@@ -55,6 +61,8 @@ I can't imagine that any of these utilities are not already part of your system,
 * sort
 * sed
 * cut
+
+(Unfortunately, the script is not POSIX-compliant partly due to the use of arrays.)
 
 ### Installation
 
@@ -74,19 +82,78 @@ I can't imagine that any of these utilities are not already part of your system,
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-Here's the help description:
+This message will be displayed when running `xrdb-replace --help`:
 
-[PRINT BASIC USAGE]
+```sh
+usage: $(basename $0) [-options ...] [-f file_path] [-d delimiter] [-r reload_script] [target_file] [prefix]
+    -F, --from-default          Read from default settings file. Usually ~/.config/xrdb-replace/files
+    -q, --quote                 Surround xrdb values with quotes in "target_file"
+    -R, --reload-default        Run default reload script. Should be located in the same directory as "target_file" and named "reload.sh"
+    -g, --glob                  Use a glob ("*") instead of "prefix" if a specific xrdb value cannot be found
+    -b, --backup                Create a backup of "target_file", named "target_file.bak"
+    -f, --from-file file_path   Use "file_path" as settings file.
+    -d, --delimiter delimiter   Indicates that "delimiter" surrounds every xrdb variable in the template file
+    -r, --reload reload_script  Specifies the name of the reload script to be used
+    -h, --help                  Prints this message
+    target_file                 The target file to apply the script to. Only used if "-f" or "-F" is not passed
+    prefix                      The xrdb prefix used to identify xrdb variables in the template
+```
 
+### Basic usage
 An example of basic usage:
 
 ```sh
-xrdb-replace ~/.config/dunst/dunstrc dunst
+xrdb-replace ~/.config/app/apprc app
 ```
 
-This tells the script to replace the "dunstrc" with a template which should be named "dunstrc.in", using the xrdb keyword "dunst". This means that there should exist a template file "dunstrc.in" which is identical to your regular dunstrc file but with the exception for wherever you want to use a xrdb variable. E.g, "%dunst.background%" ("%" is the default deliminator) will be replaced with the corresponding value found in the xrdb database. 
+This tells the script to look for a template in the same directory as `apprc`. The template should be called `apprc.in`. The template should be identical to your regular config file, with the exception of the values you want to read from the xrdb database. These should be prefixed with `app` and surrounded by `%`.
 
-When using the script with a settings file, this is a possible usage:
+If this is your regular `apprc`
+
+```sh
+# ~/.config/app/apprc
+set background #222222
+set foreground #dddddd
+set borderpx   10
+```
+
+this is a possible template:
+
+```sh
+# ~/.config/app/apprc.in
+set background %app.background%
+set foreground %app.foreground%
+set borderpx   %app.borderpx%
+```
+
+The delimiter `%` prevents the script from matching unwanted values. For some config files, this might not be optimal. The `-d` flag can be used to change the delimiter. 
+
+After trunning the script, a temporary copy of the template file will be created, i.e `apprc.in.tmp`. The script will then replace all the xrdb variables with the corresponding values read from the xrdb database. Then the script will overwrite the target file (`apprc`) with this temporary file. The template will remain untouched. 
+
+NOTE: When you want to edit your config file, edit the template instead, otherwise the changes will be overwritten the next time you run the script. 
+
+### Reload script
+If the `-r` (or `-R`) flag is passed, the script will attempt to run a user-specified reload script located in the same directory as the target file. This script can be anything, but I suggest using it to restart applications that needs to be restarted before new changes to their config files can take affect.
+
+Here's an example of a reload script I'm using for dunst: 
+
+```sh
+#!/bin/bash
+# ~/.config/dunst/reload.sh
+
+killall dunst
+
+notify-send -u low      "Testing low"
+notify-send -u normal   "Testing normal"
+notify-send -u critical "Testing critical"
+```
+
+Dunst is automatically started again whenever a notification is sent. I send three new notifications in the script in order to see how the new changes apply. 
+
+### From file
+You often want to apply xrdb changes to many config files at once, probably whenever there's a change in your xrdb database. For this purpose, you can define a settings file where you specify all your config files.
+
+Calling the script using such a file can be done as follows:
 
 ```sh
 xrdb-replace -f ~/.config/xrdb-replace/files
@@ -94,29 +161,28 @@ xrdb-replace -f ~/.config/xrdb-replace/files
 
 Each line in this file should follow the same structure as the arguments you wish to pass to xrdb-replace. I.e
 
-```
+```sh
+# ~/config/xrdb-replace/files
 $XDG_CONFIG_HOME/rofi/colors.rasi  rofi 
 $XDG_CONFIG_HOME/dunst/dunstrc     dunst -R
 $XDG_CONFIG_HOME/zathura/zathurarc zathura -d "#"
 ```
 
-For each line, xrdb-replace will be called with that line as its arguments. It's important to note that the arguments defined in the line read from the file takes presedence over the arguments initially passed to the script. E.g, if the script is called as follows, using the same settings file
+For each line, xrdb-replace will be called with that line as its arguments. It's important to note that the arguments defined in the line read from the file takes presedence over the arguments initially passed to the script. E.g, if the script is called as follows, 
 
 ```sh
 xrdb-replace -d "!" -f ~/.config/xrdb-replace/files
 ```
 
-then "!" will be used as delimiter for all files except the zathurarc, where "#" will still be used.
+then `!` will be used as delimiter for all files except the zathurarc, where `#` will still be used.
 
-I recommend creating a settings file and putting all the files you'd want to apply the script to there in the described format. I then suggest setting up an easy way of calling the script every time you reload xrdb. 
-
-If you are using vim/neovim, I recommend an auto command for this purpose. 
+I recommend creating a settings file and putting all the files you'd want to apply the script to there. I then suggest setting up an easy way of calling the script every time you reload xrdb. If you are using vim, an autocommand can be used for this purpose:
 
 ```sh
-autocmd BufWritePost *Xresources,*Xdefaults !xrdb %; xrdb-replace -f -g $HOME/.config/xrdb-replace/files  
+autocmd BufWritePost *Xresources,*Xdefaults !xrdb %; xrdb-replace -g -f $HOME/.config/xrdb-replace/files  
 ```
 
-Place this in your vimrc, and ever time you write to your Xresources or Xdefaults file, xrdb will be reloaded and xrdb-replace will be called with your settings file.
+Place this in your vimrc, and every time you write to your Xresources or Xdefaults file, xrdb will be reloaded and xrdb-replace will be called with your settings file.
 
 <!-- CONTRIBUTING -->
 ## Contributing
@@ -130,9 +196,9 @@ Distributed under the MIT License. See `LICENSE` for more information.
 ## Contact and social media
 :mailbox_with_mail: [Email](mailto:anton@exlex.se) (the most reliable way of reaching me)
 
-:camera: [Instagram](https://www.instagram.com/palmdrop/) (where I showcase a lot of my work)
+:camera: [Instagram](https://www.instagram.com/palmdrop/) (where I showcase some of my artistic projects)
 
-:computer: [Blog](https://palmdrop.github.io/) (where I occasionally write posts about my process)
+:computer: [Blog](https://palmdrop.github.io/) (where I occasionally write posts about generative art)
 
 <!-- ACKNOWLEDGEMENTS -->
 ## Acknowledgements
