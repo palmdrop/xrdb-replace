@@ -39,13 +39,13 @@
 
 <!-- ABOUT THE PROJECT -->
 ## About The Project
-Being able to customize the look-and-feel of various applications in a single place is extremely convenient. For many Linux-users, that place is Xresources. However, not all application read variables using the xrdb database. Instead, these applications have to be configured purely using their individual config files, which can be a hassle if you e.g want to achieve a coherent colorscheme across your system. 
+Being able to customize the look-and-feel of various applications in a single place is extremely convenient. For many Linux-users, that place is Xresources. However, not all applications read variables using the xrdb database. Instead, these applications have to be configured purely using their individual config files, which can be a hassle if you e.g want to achieve a coherent color scheme across your system. 
 
-This script resolves this issue. Create a template of your config file and indicate whever you wish to read values from the xrdb database. Run the script, and a new config file will be produced with the specified values. 
+This script resolves this issue. Create a template of your config file and indicate where you want to read values from the xrdb database. Run the script, and a new config file will be produced using the specified values. 
 
 Every time you edit Xresources or make changes in your template (which you should edit now, instead of your regular config file), run this script for your new changes to take effect.
 
-Some applications, require restart for new settings to be used. The script also has support for running a reload script written by the user, which could be configured to restart the affected applications.
+Some applications requre restart for new settings to be used. This script also has support for running a reload script written by the user, that could be configured to restart the affected applications.
 
 More under <a href="#usage">usage</a>.
 
@@ -62,7 +62,7 @@ I can't imagine that any of these utilities are not already part of your system,
 * sed
 * cut
 
-(Unfortunately, the script is not POSIX-compliant partly due to the use of arrays.)
+(Unfortunately, the script is not POSIX-compliant, partly due to the use of arrays.)
 
 ### Installation
 
@@ -82,9 +82,9 @@ I can't imagine that any of these utilities are not already part of your system,
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-This message will be displayed when running `xrdb-replace --help`:
+This message is displayed when running `xrdb-replace --help`:
 
-```sh
+```
 usage: $(basename $0) [-options ...] [-f file_path] [-d delimiter] [-r reload_script] [target_file] [prefix]
     -F, --from-default          Read from default settings file. Usually ~/.config/xrdb-replace/files
     -q, --quote                 Surround xrdb values with quotes in "target_file"
@@ -106,7 +106,7 @@ An example of basic usage:
 xrdb-replace ~/.config/app/apprc app
 ```
 
-This tells the script to look for a template in the same directory as `apprc`. The template should be called `apprc.in`. The template should be identical to your regular config file, with the exception of the values you want to read from the xrdb database. These should be prefixed with `app` and surrounded by `%`.
+This tells the script to look for a template in the same directory as `apprc`. The template should be called `apprc.in`, and be identical to your regular config file, except for the values you want to read from the xrdb database. These should be prefixed with `app` and surrounded by `%`, e.g `%app.background%` or `%app.foreground%`. These variables will be searched for in the xrdb database.
 
 If this is your regular `apprc`
 
@@ -126,16 +126,16 @@ set foreground %app.foreground%
 set borderpx   %app.borderpx%
 ```
 
-The delimiter `%` prevents the script from matching unwanted values. For some config files, this might not be optimal. The `-d` flag can be used to change the delimiter. 
+The delimiter `%` prevents the script from matching unwanted values. For some config files, this particular symbol might not be optimal. Therefore, the `-d` flag can be used to change the delimiter. 
 
-After trunning the script, a temporary copy of the template file will be created, i.e `apprc.in.tmp`. The script will then replace all the xrdb variables with the corresponding values read from the xrdb database. Then the script will overwrite the target file (`apprc`) with this temporary file. The template will remain untouched. 
+After running the script, a temporary copy of the template file will be created, i.e `apprc.in.tmp`. The script will then replace all the xrdb variables with the corresponding values read from the xrdb database. Then the script will overwrite the target file (`apprc`) with this temporary file. The template will remain untouched. If the script for some reason fails, neither the template nor the target file will be altered.
 
-NOTE: When you want to edit your config file, edit the template instead, otherwise the changes will be overwritten the next time you run the script. 
+NOTE: When you want to edit your config file, edit the template instead, otherwise the changes will be overwritten the next time you run the script. My suggested workflow is to create a keybinding or other shortcut for easily running the script whenever needed. 
 
 ### Reload script
-If the `-r` (or `-R`) flag is passed, the script will attempt to run a user-specified reload script located in the same directory as the target file. This script can be anything, but I suggest using it to restart applications that needs to be restarted before new changes to their config files can take affect.
+If the `-r` (or `-R`) flag is passed, the script will attempt to run a user-specified reload script located in the same directory as the target file. This script can be anything, but I suggest using it to restart applications that need to be restarted before new changes to their config files can take effect.
 
-Here's an example of a reload script I'm using for dunst: 
+Here's an example of a possible reload script for dunst: 
 
 ```sh
 #!/bin/bash
@@ -148,33 +148,31 @@ notify-send -u normal   "Testing normal"
 notify-send -u critical "Testing critical"
 ```
 
-Dunst is automatically started again whenever a notification is sent. I send three new notifications in the script in order to see how the new changes apply. 
+Dunst is automatically started again whenever a notification is sent. Three notifications are immediately sent to observe the effect of the changes.
 
 ### From file
-You often want to apply xrdb changes to many config files at once, probably whenever there's a change in your xrdb database. For this purpose, you can define a settings file where you specify all your config files.
-
-Calling the script using such a file can be done as follows:
+You often want to apply xrdb changes to many config files at once. This can be done using a settings file. Calling the script using such a file can be done as follows:
 
 ```sh
 xrdb-replace -f ~/.config/xrdb-replace/files
 ```
 
-Each line in this file should follow the same structure as the arguments you wish to pass to xrdb-replace. I.e
+Each line in this file should follow the same structure as the arguments you wish to pass to xrdb-replace, i.e
 
 ```sh
-# ~/config/xrdb-replace/files
+# ~/.config/xrdb-replace/files
 $XDG_CONFIG_HOME/rofi/colors.rasi  rofi 
 $XDG_CONFIG_HOME/dunst/dunstrc     dunst -R
 $XDG_CONFIG_HOME/zathura/zathurarc zathura -d "#"
 ```
 
-For each line, xrdb-replace will be called with that line as its arguments. It's important to note that the arguments defined in the line read from the file takes presedence over the arguments initially passed to the script. E.g, if the script is called as follows, 
+For each line, xrdb-replace will be called with that line as its arguments. It's important to note that the arguments defined in the line read from the file takes precedence over the arguments initially passed to the script. E.g, if the script is called as follows, 
 
 ```sh
 xrdb-replace -d "!" -f ~/.config/xrdb-replace/files
 ```
 
-then `!` will be used as delimiter for all files except the zathurarc, where `#` will still be used.
+then `!` will be used as a delimiter for all files except the zathurarc, where `#` will still be used.
 
 I recommend creating a settings file and putting all the files you'd want to apply the script to there. I then suggest setting up an easy way of calling the script every time you reload xrdb. If you are using vim, an autocommand can be used for this purpose:
 
@@ -186,7 +184,7 @@ Place this in your vimrc, and every time you write to your Xresources or Xdefaul
 
 <!-- CONTRIBUTING -->
 ## Contributing
-Suggestions are much appreciated. Make a fork and create a pull request, or message me directly. I'm still learning bash, so there's likely many things about the script that could be drasticly improved. 
+Suggestions are much appreciated. Make a fork and create a pull request, or message me directly. I'm still learning bash, so there are likely many things about the script that could be drastically improved. 
 
 <!-- LICENSE -->
 ## License
@@ -202,4 +200,5 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 <!-- ACKNOWLEDGEMENTS -->
 ## Acknowledgements
-Some of this code is based on a [comment](https://www.reddit.com/r/unixporn/comments/8giij5/guide_defining_program_colors_through_xresources/e1acuo0?utm_source=share&utm_medium=web2x&context=3) by reddit user [KD2NYT](https://www.reddit.com/user/KD2NYT/). 
+Some of this code is based on a [comment](https://www.reddit.com/r/unixporn/comments/8giij5/guide_defining_program_colors_through_xresources/e1acuo0?utm_source=share&utm_medium=web2x&context=3) by Reddit user [KD2NYT](https://www.reddit.com/user/KD2NYT/). 
+
