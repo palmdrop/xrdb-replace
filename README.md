@@ -74,9 +74,13 @@ I can't imagine that any of these utilities are not already part of your system,
    ```sh
    cd xrdb-replace
    ```
-3. Move the `xrdb-replace` file to somewhere within your path, e.g
+3. Copy the `xrdb-replace` file to somewhere within your path, e.g
    ```sh
-   mv xrdb-replace /usr/bin/xrdb-replace
+   cp xrdb-replace /usr/local/bin/xrdb-replace
+   ```
+   or run the `install.sh` script
+   ```sh
+   source install.sh
    ```
 
 <!-- USAGE EXAMPLES -->
